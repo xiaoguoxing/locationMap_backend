@@ -1,0 +1,74 @@
+# Python 版本要求：3.12.x
+#
+# 为什么锁 3.12 而不是 3.14：
+#   pandas 2.x 在 Python 3.14 下没有预编译 wheel，会退化成源码编译并失败
+#   （需要 Visual Studio Build Tools）。3.14 上只有 pandas 3.0+ 有 wheel，
+#   而 pandas 3.0 存在一批 breaking change，与本项目现有 groupby / agg 用法
+#   未做兼容验证。因此统一锁定 3.12 + pandas 2.x 基线。
+#
+# 安装步骤见本文件末尾注释。
+
+# ---- 数据处理 ----
+pandas==2.2.3
+numpy==1.26.4
+
+# ---- 地图生成（maps/）----
+folium==0.17.0
+# shapely：TPU 参考边界的几何简化（fetch_tpu_boundary.py）
+shapely==2.0.6
+# requests：从 CSDI WFS 服务下载 TPU 边界（fetch_tpu_boundary.py）
+requests==2.32.3
+
+# ---- 数据抽取（gencsv/）----
+# pyodbc：连接数据库，需系统已装对应的 ODBC Driver
+pyodbc==5.2.0
+# openpyxl：读写 xlsx（missing_gps / reference 目录下的对数底稿）
+openpyxl==3.1.5
+
+# ---- Web 展示（dashboard/）----
+Flask==3.0.0
+Werkzeug==3.0.1
+Jinja2==3.1.2
+MarkupSafe==2.1.3
+itsdangerous==2.1.2
+click==8.1.7
+blinker==1.7.0
+
+# ============================================================
+# 安装步骤（Windows）
+# ============================================================
+#
+# 1. 装 Python 3.12
+#    到 https://www.python.org/downloads/release/python-31210/
+#    下载 "Windows installer (64-bit)"，安装时勾选 "py launcher"
+#    （不必勾 "Add to PATH"，用 py -3.12 调用即可，避免和现有 3.14 冲突）
+#
+# 2. 确认 3.12 已就位
+#    py -0p
+#    应能看到 -V:3.12 这一行
+#
+# 3. 在项目根目录建虚拟环境
+#    py -3.12 -m venv .venv312
+#
+# 4. 激活虚拟环境
+#    Git Bash:    source .venv312/Scripts/activate
+#    PowerShell:  .\.venv312\Scripts\Activate.ps1
+#    CMD:         .venv312\Scripts\activate.bat
+#
+# 5. 安装依赖
+#    python -m pip install --upgrade pip
+#    python -m pip install -r requirements.txt
+#
+# 6. 验证
+#    python -c "import pandas, folium, shapely, requests; print(pandas.__version__)"
+#    应输出 2.2.3
+#
+# 7. 下载 TPU 参考边界（只需跑一次）
+#    python maps/fetch_tpu_boundary.py
+#    若报 TLS 证书错误，见该脚本的 --insecure 参数说明
+#
+# 8. 重新生成地图
+#    ./02_generate_maps.bat
+#
+# 注意：dashboard/venv 是在 Linux 下创建的 python3.12 环境
+#      （只有 bin/ 没有 Scripts/），在 Windows 上无法使用，请忽略它。
