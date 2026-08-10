@@ -189,46 +189,65 @@ def get_geojson_centroid(geometry: Dict) -> Optional[Tuple[float, float]]:
         
     elif geometry['type'] == 'MultiPolygon':
         # MultiPolygon: [[[outer1, hole1...], [outer2, hole2...]], ...]
-        # For Hong Kong districts like Islands, we want the "visual center"
-        # Strategy: calculate centroid of each polygon, pick the largest one
-        
-        largest_area = -1
+        #
+        # 这里取「面积最大的那个子多边形的质心」，而不是各子多边形质心的
+        # 面积加权平均。原因：加权平均在多岛/多块形状下会落到岛与岛之间的
+        # 海面上。实测按海岸线裁剪行政区后，大埔与离岛两个区的标注锚点
+        # 就因此跑到了区外（地图上表现为数值标签浮在海上）。
+        # 取最大子块的质心能保证锚点落在实际陆地上。
+        largest_area = -1.0
         best_centroid = None
-        all_centroids = []
-        all_areas = []
-        
+
         for polygon in geometry['coordinates']:
             outer_ring = polygon[0]
             centroid = calculate_polygon_centroid(outer_ring)
-            
-            # Calculate approximate area for weighting
+
             n = len(outer_ring)
             area = 0.0
             for i in range(n):
                 j = (i + 1) % n
-                area += abs(outer_ring[i][0] * outer_ring[j][1] - outer_ring[j][0] * outer_ring[i][1])
-            area = 0.5 * area
-            
-            all_centroids.append(centroid)
-            all_areas.append(area)
-            
+                area += (outer_ring[i][0] * outer_ring[j][1]
+                         - outer_ring[j][0] * outer_ring[i][1])
+            area = abs(0.5 * area)
+
             if area > largest_area:
                 largest_area = area
                 best_centroid = centroid
-        
-        # Option 1: Just use the largest polygon's centroid (good for islands with one major landmass)
-        # return best_centroid
-        
-        # Option 2: Area-weighted average of all polygon centroids (more representative overall)
-        total_area = sum(all_areas)
-        if total_area > 0:
-            weighted_lon = sum(c[0] * a for c, a in zip(all_centroids, all_areas)) / total_area
-            weighted_lat = sum(c[1] * a for c, a in zip(all_centroids, all_areas)) / total_area
-            return (weighted_lon, weighted_lat)
-        
+
         return best_centroid
-        
+
     return None
+
+
+def get_interior_point(geometry: Dict) -> Optional[Tuple[float, float]]:
+    """
+    取几何内部的一个代表点（保证落在多边形内）
+
+    质心算法对凹形无能为力：西贡区最大的那块陆地呈狭长弯曲形状，
+    其面积质心落在海湾凹陷处（即区外）。shapely 的 representative_point()
+    用扫描线找内部点，能保证结果落在多边形内部。
+
+    Returns:
+        (lon, lat)；shapely 不可用或几何无效时返回 None，由调用方回退到质心
+    """
+    try:
+        from shapely.geometry import shape as _shape
+    except ImportError:
+        return None
+
+    try:
+        geom = _shape(geometry)
+        if not geom.is_valid:
+            geom = geom.buffer(0)
+        if geom.is_empty:
+            return None
+        # MultiPolygon 取面积最大的子块，避免代表点落到零碎小岛上
+        if geom.geom_type == 'MultiPolygon':
+            geom = max(geom.geoms, key=lambda g: g.area)
+        point = geom.representative_point()
+        return (point.x, point.y)
+    except Exception:
+        return None
 
 
 def get_adjusted_centroid(district: str, geometry: Dict) -> Optional[Tuple[float, float]]:
@@ -250,10 +269,13 @@ def get_adjusted_centroid(district: str, geometry: Dict) -> Optional[Tuple[float
     Returns:
         Tuple of (adjusted_lon, adjusted_lat) or None if invalid
     """
-    centroid = get_geojson_centroid(geometry)
+    # 优先用「内部代表点」：按海岸线裁剪后各区多为多岛 / 凹形，
+    # 面积质心可能落到海面上（实测大埔、离岛、西贡三个区都出现过）。
+    # shapely 不可用时回退到质心算法，保证纯标准库环境仍可运行。
+    centroid = get_interior_point(geometry) or get_geojson_centroid(geometry)
     if centroid is None:
         return None
-    
+
     centroid_lon, centroid_lat = centroid
     
     # Apply manual adjustment if defined for this district
