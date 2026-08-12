@@ -11,7 +11,6 @@ CSV 还是数据库。将来切换到 SQL Server 时，新增一个 `SqlMeasurem
 """
 
 import abc
-import glob
 import re
 import threading
 from pathlib import Path
@@ -65,9 +64,16 @@ class CsvMeasurementRepository(MeasurementRepository):
     # ---- 文件发现 ----
 
     def _scan_files(self) -> List[dict]:
-        """扫描目录，解析出 (参数, 起止日期, 路径) 清单"""
+        """扫描历史根目录和已完整发布的批次 CSV。"""
         found = []
-        for path in sorted(self._csv_dir.glob('*.csv')):
+        paths = list(self._csv_dir.glob('*.csv'))
+        releases_dir = self._csv_dir / 'releases'
+        if releases_dir.exists():
+            for release_dir in releases_dir.iterdir():
+                if release_dir.is_dir() and (release_dir / 'manifest.json').is_file():
+                    paths.extend(release_dir.glob('*.csv'))
+
+        for path in sorted(paths, key=lambda item: str(item)):
             match = _FILENAME_PATTERN.match(path.name)
             if not match:
                 continue
@@ -98,8 +104,13 @@ class CsvMeasurementRepository(MeasurementRepository):
             if item['parameter'] not in entry['parameters']:
                 entry['parameters'].append(item['parameter'])
 
-        # 倒序：最新区间在前
-        result = sorted(by_range.values(), key=lambda x: x['dateFrom'], reverse=True)
+        # 日期必须具备三项参数才可用，避免暴露不完整批次。
+        required = {'cl2_free_1', 'ecoli', 'turby'}
+        result = [
+            entry for entry in by_range.values()
+            if set(entry['parameters']) == required
+        ]
+        result.sort(key=lambda x: x['dateFrom'], reverse=True)
         for entry in result:
             entry['parameters'].sort()
             # CSV 数据源下只要文件存在即可用
@@ -115,9 +126,13 @@ class CsvMeasurementRepository(MeasurementRepository):
         文件名里带生成时间戳，同一参数+区间可能有多份（重复导出），
         取文件名排序最大的那个（即时间戳最新）。
         """
-        pattern = str(self._csv_dir / '{}_{}_{}_*.csv'.format(parameter, date_from, date_to))
-        matches = sorted(glob.glob(pattern))
-        return Path(matches[-1]) if matches else None
+        candidates = [
+            item['path'] for item in self._scan_files()
+            if item['parameter'] == parameter
+            and item['dateFrom'] == date_from
+            and item['dateTo'] == date_to
+        ]
+        return max(candidates, key=lambda path: path.name) if candidates else None
 
     def _read_csv(self, path: Path) -> pd.DataFrame:
         """读取并规整 CSV（带 mtime 缓存）"""

@@ -22,6 +22,7 @@ class ErrorCode:
     INVALID_DATE = 4003                  # 日期格式 / from>to / 缺失
     DATE_SPAN_EXCEEDED = 4004            # 日期跨度超限
     RESULT_SET_TOO_LARGE = 4005          # 结果集超过上限
+    EXTRACTION_TASK_NOT_FOUND = 4101     # 同步任务不存在或服务已重启
 
 
 class BusinessException(Exception):

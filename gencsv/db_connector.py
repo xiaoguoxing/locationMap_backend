@@ -1,7 +1,7 @@
-import pyodbc
 import csv
-import os
-from datetime import datetime
+from pathlib import Path
+
+import pyodbc
 
 def get_connection_string(db_config):
     # Driver might vary depending on server installation (ODBC Driver 17/18 for SQL Server)
@@ -16,36 +16,41 @@ def get_connection_string(db_config):
     )
     return conn_str
 
-def execute_sql_to_csv(sql_file_path, output_file_path, db_config, logger):
+def execute_query_to_csv(sql_query, output_file_path, db_config, logger):
+    """执行固定模板生成的 SQL，并将结果写入指定暂存文件。"""
     conn = None
+    output_path = Path(output_file_path)
     try:
         conn_str = get_connection_string(db_config)
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
-        
-        with open(sql_file_path, 'r', encoding='utf-8') as f:
-            sql_query = f.read()
-        
         cursor.execute(sql_query)
         columns = [column[0] for column in cursor.description]
-        
-        with open(output_file_path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
+
+        with output_path.open('w', newline='', encoding='utf-8') as handle:
+            writer = csv.writer(handle)
             writer.writerow(columns)
-            # fetchmany is better for large datasets than fetchall
             while True:
                 rows = cursor.fetchmany(1000)
                 if not rows:
                     break
                 writer.writerows(rows)
-                
-        logger.info(f"Success: {os.path.basename(output_file_path)}")
-        return True
 
-    except Exception as e:
-        logger.error(f"Failed {os.path.basename(sql_file_path)}: {str(e)}")
-        return False
+        logger.info('Success: %s', output_path.name)
+    except Exception:
+        output_path.unlink(missing_ok=True)
+        logger.exception('Failed to generate %s', output_path.name)
+        raise
     finally:
         if conn:
             conn.close()
+
+def execute_sql_to_csv(sql_file_path, output_file_path, db_config, logger):
+    """兼容旧调用：读取 SQL 文件后交给统一执行函数。"""
+    try:
+        sql_query = Path(sql_file_path).read_text(encoding='utf-8')
+        execute_query_to_csv(sql_query, output_file_path, db_config, logger)
+        return True
+    except Exception:
+        return False
 

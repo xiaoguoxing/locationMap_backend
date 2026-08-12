@@ -13,7 +13,7 @@ import uuid
 
 from flask import Flask, g, jsonify, request
 
-from api import config, geography, security, service
+from api import config, extraction, geography, security, service
 from api.metadata import list_parameter_metadata
 from api.response import BusinessException, ErrorCode, failure, success
 from api.validation import validate_query
@@ -148,6 +148,23 @@ def _register_routes(app: Flask) -> None:
         data = service.query_measurement(
             params['parameter'], params['dateFrom'], params['dateTo'], params['viewType'])
         return success(data)
+
+    @app.route('/api/water-quality/extraction/refresh', methods=['POST', 'OPTIONS'])
+    def extraction_refresh():
+        """触发后台 CSV 同步；不接受前端传入 SQL、日期或文件路径。"""
+        if request.method == 'OPTIONS':
+            return '', 204
+        return success(extraction.start_refresh())
+
+    @app.route('/api/water-quality/extraction/status', methods=['GET'])
+    def extraction_status():
+        """查询进程内后台同步任务状态。"""
+        task_id = request.args.get('taskId', '').strip()
+        task = extraction.get_status(task_id) if task_id else None
+        if task is None:
+            return failure(ErrorCode.EXTRACTION_TASK_NOT_FOUND,
+                           'Extraction task not found or service restarted')
+        return success(task)
 
     @app.route('/actuator/health', methods=['GET'])
     def health():
