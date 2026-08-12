@@ -12,20 +12,16 @@
 pandas==2.2.3
 numpy==1.26.4
 
-# ---- 地图生成（maps/）----
-folium==0.17.0
-# shapely：TPU 参考边界的几何简化（fetch_tpu_boundary.py）
+# ---- 地理处理与边界维护（api/、tools/）----
+# shapely：TPU 空间归属、几何简化与行政区海岸线裁剪
 shapely==2.0.6
-# requests：从 CSDI WFS 服务下载 TPU 边界（fetch_tpu_boundary.py）
+# requests：从 CSDI WFS 服务下载 TPU 边界
 requests==2.32.3
 
 # ---- 数据抽取（gencsv/）----
 # pyodbc：连接数据库，需系统已装对应的 ODBC Driver
 pyodbc==5.2.0
-# openpyxl：读写 xlsx（missing_gps / reference 目录下的对数底稿）
-openpyxl==3.1.5
-
-# ---- Web 展示（dashboard/）----
+# ---- Flask JSON / GeoJSON API（api/）----
 Flask==3.0.0
 Werkzeug==3.0.1
 Jinja2==3.1.2
@@ -60,15 +56,9 @@ blinker==1.7.0
 #    python -m pip install -r requirements.txt
 #
 # 6. 验证
-#    python -c "import pandas, folium, shapely, requests; print(pandas.__version__)"
+#    python -c "import pandas, flask, shapely, requests; print(pandas.__version__)"
 #    应输出 2.2.3
 #
-# 7. 下载 TPU 参考边界（只需跑一次）
-#    python maps/fetch_tpu_boundary.py
+# 7. 如需更新 TPU 边界（通常不需要）
+#    python tools/fetch_tpu_boundary.py
 #    若报 TLS 证书错误，见该脚本的 --insecure 参数说明
-#
-# 8. 重新生成地图
-#    ./02_generate_maps.bat
-#
-# 注意：dashboard/venv 是在 Linux 下创建的 python3.12 环境
-#      （只有 bin/ 没有 Scripts/），在 Windows 上无法使用，请忽略它。

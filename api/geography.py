@@ -1,30 +1,16 @@
-"""地理数据：区界、区名归一化、标注锚点、TPU 细分区
-
-区名归一化表与质心算法直接复用 `maps/` 下的现有实现，避免同一套规则
-在两处维护导致不一致。
-"""
+"""地理数据：区界、区名归一化、标注锚点、TPU 细分区。"""
 
 import json
-import sys
 import threading
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from api import config
-
-# 复用 maps 包里已有的映射表与质心算法。
-# 注意：不能 import location_mapper —— 它在导入时会改写 sys.stdout，
-# 会干扰 Flask 的日志输出。
-_MAPS_DIR = config.PROJECT_ROOT / 'maps'
-if str(_MAPS_DIR) not in sys.path:
-    sys.path.insert(0, str(_MAPS_DIR))
-
-from choropleth_mapper import (  # noqa: E402
+from api.data.district_mapping import NEIGHBORHOOD_TO_DISTRICT
+from api.geo_utils import (
     DISTRICT_CENTROID_ADJUSTMENTS,
     DISTRICT_NAMES_TC,
     get_adjusted_centroid,
 )
-from data.district_mapping import NEIGHBORHOOD_TO_DISTRICT  # noqa: E402
 
 _lock = threading.Lock()
 _district_geojson: Optional[dict] = None
@@ -127,9 +113,8 @@ def name_mapping() -> Dict[str, str]:
     构建「CSV 里的地点名 → 官方区名」映射
 
     CSV 的 district 字段存的是邻里名（如 the peak / ap lei chau），
-    不是 18 区区名，必须过这张表。规则与
-    maps/district_aggregator.load_district_mapping 一致：
-    邻里名 + 区名本身 + 去空格 + & / and 互换 四类写法都能命中。
+    不是 18 区区名，必须通过映射表归一化。支持邻里名、区名本身、
+    去空格以及 & / and 互换等写法。
     """
     global _name_mapping
     if _name_mapping is not None:

@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TPU 参考边界下载脚本（一次性运行）
+TPU 边界下载脚本
 
 从 CSDI 门户的 WFS 服务拉取香港 TPU（Tertiary Planning Unit，第三级规划统计区）
-边界，做几何简化后存为本地 GeoJSON，供地图生成时叠加纯装饰性参考线框使用。
-
-设计要点：
-- 仅需运行一次，产物落地到 maps/data/hk_tpu_simplified.geojson
-- 地图生成流程（location_mapper / multi_param_mapper）只读本地文件，不联网
-- 原始全量数据约 22 MB / 292 个 MultiPolygon，必须简化后才能内联进 HTML
+边界，做几何简化后存入 API 地理数据目录。
 
 用法：
-    python maps/fetch_tpu_boundary.py
-    python maps/fetch_tpu_boundary.py --tolerance 0.0005   # 简化更狠、文件更小
+    python tools/fetch_tpu_boundary.py
+    python tools/fetch_tpu_boundary.py --tolerance 0.0005
 """
 
 import argparse
@@ -41,7 +36,8 @@ WFS_PARAMS = {
 }
 
 # 输出路径
-OUTPUT_PATH = Path(__file__).parent / 'data' / 'hk_tpu_simplified.geojson'
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_PATH = PROJECT_ROOT / 'api' / 'data' / 'hk_tpu_simplified.geojson'
 
 # 默认简化容差（单位：度）。0.0002 度 ≈ 20 米
 DEFAULT_TOLERANCE = 0.0002

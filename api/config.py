@@ -10,7 +10,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ---- 服务 ----
-# 默认 5001，避开老 dashboard 占用的 5000
+# 默认 5001，可通过环境变量覆盖
 PORT = int(os.getenv('WQ_API_PORT', '5001'))
 HOST = os.getenv('WQ_API_HOST', '0.0.0.0')
 DEBUG = os.getenv('WQ_API_DEBUG', 'false').lower() == 'true'
@@ -20,10 +20,12 @@ DEBUG = os.getenv('WQ_API_DEBUG', 'false').lower() == 'true'
 DATA_SOURCE = os.getenv('WQ_API_DATA_SOURCE', 'csv')
 
 CSV_DIR = Path(os.getenv('WQ_API_CSV_DIR', str(PROJECT_ROOT / 'gencsv' / 'output')))
-MAPS_DATA_DIR = Path(os.getenv('WQ_API_MAPS_DATA', str(PROJECT_ROOT / 'maps' / 'data')))
-DISTRICT_GEOJSON = MAPS_DATA_DIR / 'hk_districts.geojson'
-TPU_RAW_CACHE = MAPS_DATA_DIR / '_tpu_raw_cache.json'
-TPU_SIMPLIFIED = MAPS_DATA_DIR / 'hk_tpu_simplified.geojson'
+GEO_DATA_DIR = Path(os.getenv(
+    'WQ_API_GEO_DATA', str(PROJECT_ROOT / 'api' / 'data')
+))
+DISTRICT_GEOJSON = GEO_DATA_DIR / 'hk_districts.geojson'
+TPU_RAW_CACHE = GEO_DATA_DIR / '_tpu_raw_cache.json'
+TPU_SIMPLIFIED = GEO_DATA_DIR / 'hk_tpu_simplified.geojson'
 
 # ---- 业务约束（与 Java 后端 spec 对齐）----
 # 日期跨度上限（天）

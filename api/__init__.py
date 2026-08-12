@@ -1,7 +1,4 @@
-"""水质地图数据接口服务
-
-独立于老 dashboard 的 Flask 服务，只输出 JSON / GeoJSON。
-"""
+"""水质地图 JSON / GeoJSON 接口服务。"""
 
 __all__ = ['create_app']
 

@@ -3,7 +3,7 @@
 本模块既供 `/parameter/list` 接口对外输出，也供各视图内部计算 colorLevel，
 确保后端着色与前端图例 100% 同源。
 
-区间开闭语义（务必与 maps/district_aggregator.get_color_for_district 一致）：
+区间开闭语义：
     minExclusive=True  → 下界开区间（value > min）
     minExclusive=False → 下界闭区间（value >= min）
     maxInclusive=True  → 上界闭区间（value <= max）

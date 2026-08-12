@@ -98,7 +98,7 @@ class CsvMeasurementRepository(MeasurementRepository):
             if item['parameter'] not in entry['parameters']:
                 entry['parameters'].append(item['parameter'])
 
-        # 倒序：最新区间在前（与老 dashboard 的排序行为一致）
+        # 倒序：最新区间在前
         result = sorted(by_range.values(), key=lambda x: x['dateFrom'], reverse=True)
         for entry in result:
             entry['parameters'].sort()

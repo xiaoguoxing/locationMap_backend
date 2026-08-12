@@ -27,42 +27,22 @@ ENV/
 # 项目产物（可重新生成，不进版本库）
 # ============================================================
 
-# 数据抽取产物：由 gencsv/main.py 生成
+# 数据抽取产物：由 gencsv/date_range_runner.py 生成
 gencsv/output/
 # 由 sqltemplate/*.sql 渲染出的中间 SQL
 gencsv/sql/
 gencsv/archive/
 gencsv/log/
 
-# 地图产物：由 02_generate_maps.bat 生成
-maps/output/
-maps/output1/
-maps/output2/
-maps/output3/
-maps/output4/
-maps/bak/
-maps/*.zip
-
-# TPU 原始数据缓存（22 MB）：由 fetch_tpu_boundary.py 下载。
+# TPU 原始数据缓存：由 tools/fetch_tpu_boundary.py 下载。
 # 简化成品 hk_tpu_simplified.geojson 需要入库，故不忽略。
-maps/data/_tpu_raw_cache.json
+api/data/_tpu_raw_cache.json
 
 # ============================================================
 # 日志
 # ============================================================
 *.log
 api/logs/
-backend/logs/
-dashboard/logs/
-
-# ============================================================
-# Java 后端（Spring Boot 重写版）
-# ============================================================
-# 暂不推进 Java 方案，整个目录排除出版本库。
-# 代码仍保留在本地，且 .kiro/specs/springboot-backend-rewrite 下有完整的
-# 需求 / 设计 / 任务文档，将来恢复时删掉下面这行即可。
-backend/
-*.class
 
 # ============================================================
 # IDE / 编辑器

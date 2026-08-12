@@ -1,8 +1,4 @@
-"""统一响应包装与错误码
-
-结构与 `.kiro/specs/springboot-backend-rewrite` 的 ApiResponse 保持一致，
-这样将来后端换成 Spring Boot 时前端无需改动。
-"""
+"""统一响应包装与错误码。"""
 
 import time
 import uuid
@@ -12,7 +8,7 @@ from flask import g, jsonify
 
 
 class ErrorCode:
-    """错误码字典（与 Java 后端 spec 对齐）"""
+    """接口错误码字典。"""
 
     SUCCESS = 200
     UNAUTHORIZED = 401
@@ -63,8 +59,8 @@ def failure(code: int, message: str, http_status: Optional[int] = None):
     失败响应
 
     HTTP 状态码默认与业务码解耦：业务校验失败仍返回 HTTP 200，
-    由前端按 body 里的 code 分支处理（与 Java 后端行为一致）。
-    仅鉴权类错误映射到对应 HTTP 状态，便于网关层拦截。
+    由前端按 body 里的 code 分支处理。仅鉴权类错误映射到对应
+    HTTP 状态，便于网关层拦截。
     """
     payload = _wrap(False, code, message, None)
     if http_status is None:

@@ -5,7 +5,7 @@
 
 背景
 ----
-原始的 maps/data/hk_districts.geojson 存在两个问题：
+原始的 api/data/hk_districts.geojson 存在两个问题：
 
 1. 行政区划是沿海岸线**之外**的界线划定的，因此每个区都包含大片海域。
    实测裁剪前后面积对比：18 区合计只有 40.3% 落在陆地上，近六成是海面。
@@ -23,8 +23,8 @@ MultiPolygon，正确表达离岛。
 
 用法
 ----
-    python maps/clip_district_coastline.py
-    python maps/clip_district_coastline.py --output maps/data/hk_districts_land.geojson
+    python tools/clip_district_coastline.py
+    python tools/clip_district_coastline.py --output api/data/hk_districts_land.geojson
 
 默认原地更新 hk_districts.geojson，并把原始文件备份为
 hk_districts_with_sea.geojson（保留以便回退与对照）。
@@ -41,10 +41,11 @@ from typing import Optional
 from shapely.geometry import mapping, shape
 from shapely.ops import unary_union
 
-MAPS_DATA = Path(__file__).parent / 'data'
-DISTRICT_GEOJSON = MAPS_DATA / 'hk_districts.geojson'
-DISTRICT_BACKUP = MAPS_DATA / 'hk_districts_with_sea.geojson'
-TPU_GEOJSON = MAPS_DATA / 'hk_tpu_simplified.geojson'
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+GEO_DATA = PROJECT_ROOT / 'api' / 'data'
+DISTRICT_GEOJSON = GEO_DATA / 'hk_districts.geojson'
+DISTRICT_BACKUP = GEO_DATA / 'hk_districts_with_sea.geojson'
+TPU_GEOJSON = GEO_DATA / 'hk_tpu_simplified.geojson'
 
 # 坐标精度：与接口输出保持一致（6 位小数，约 0.1 米）
 COORD_PRECISION = 6
@@ -205,7 +206,7 @@ def main() -> int:
         if not path.exists():
             print('[ERROR] 未找到{}数据: {}'.format(label, path))
             if label == 'TPU':
-                print('[HINT ] 先运行: python maps/fetch_tpu_boundary.py')
+                print('[HINT ] 先运行: python tools/fetch_tpu_boundary.py')
             return 1
 
     started = time.time()

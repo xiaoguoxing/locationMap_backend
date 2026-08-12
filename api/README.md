@@ -1,10 +1,7 @@
 # 水质地图数据接口服务
 
 独立的 Flask 接口服务，只输出 JSON / GeoJSON，不做任何服务端 HTML 渲染。
-前端（`apps/web` 的 locationMap 模块）通过 Leaflet/OpenLayers 直接消费本服务的数据。
-
-老的 `dashboard/` 服务（Flask + folium 预生成 HTML + iframe）保持原样可继续运行，
-两者互不影响，便于对照验证行为一致性。
+前端（`apps/web` 的 locationMap 模块）通过 OpenLayers 消费本服务的数据。
 
 ## 设计要点
 
@@ -13,9 +10,8 @@
 将来改为直连 SQL Server 时，只需新增一个 `SqlMeasurementRepository` 并在
 配置里切换，Service / Controller / 前端均无需改动。
 
-**接口契约与 Java 后端对齐**：路径风格、统一响应包装、错误码均遵循
-`.kiro/specs/springboot-backend-rewrite` 的设计，因此将来若切到 Spring Boot
-后端，前端不需要任何改动。
+**接口稳定**：路径风格、统一响应包装和错误码由当前 Flask API 统一维护，
+后续替换数据源时保持接口契约不变。
 
 **色阶单一来源**：判色阈值只在 `metadata.py::COLOR_SCALES` 定义一次，
 既供 `/parameter/list` 对外输出，也供各视图内部计算 `colorLevel`，
@@ -31,7 +27,7 @@ python -m api.app
 set WQ_API_PORT=5001 && python -m api.app
 ```
 
-默认监听 `5001`（避开老 dashboard 的 5000）。
+默认监听 `5001`。
 
 ## 接口清单
 

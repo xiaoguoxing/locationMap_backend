@@ -30,6 +30,3 @@ def get_config():
         'jobs': [f.strip() for f in config.get('JOBS', 'files').split(',')],
     }
 
-
-print(get_config())
-

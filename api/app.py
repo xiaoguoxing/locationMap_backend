@@ -1,7 +1,6 @@
 """Flask 应用入口
 
 只输出 JSON / GeoJSON，不做任何服务端 HTML 渲染。
-老的 dashboard 服务（端口 5000）保持独立运行，两者互不影响。
 
 启动：
     python -m api.app
