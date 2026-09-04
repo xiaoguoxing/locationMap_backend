@@ -38,7 +38,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from shapely.geometry import mapping, shape
+from shapely.geometry import mapping, shape, Polygon, MultiPolygon
 from shapely.ops import unary_union
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -52,6 +52,78 @@ COORD_PRECISION = 6
 
 # 裁剪后面积占比低于此阈值时告警：可能意味着该区几何或裁剪源有问题
 SUSPICIOUS_KEEP_RATIO = 0.10
+
+# 几何清理参数
+SIMPLIFY_TOLERANCE = 0.0002  # 简化容差（约 22 米），减少顶点同时保持轮廓
+MIN_AREA_RATIO = 0.005       # 最小面积比，小于主要素面积的此比例的碎片会被过滤
+BUFFER_DISTANCE = 0.0001     # 缓冲距离（约 11 米），用于闭合缝隙和移除毛刺
+NEGATIVE_BUFFER = -0.00015   # 负向缓冲（约 16 米），更激进地移除细条和毛刺
+
+
+def clean_geometry(geom):
+    """
+    清理几何体，移除内部条纹、杂质和碎片
+    
+    步骤：
+    1. 修复拓扑问题（自相交等）
+    2. 多轮缓冲操作：
+       - 正向缓冲：填充小孔洞和缝隙
+       - 负向缓冲（更大）：移除细条、毛刺和突出部分
+       - 正向缓冲（恢复）：恢复到原始大小
+    3. 简化轮廓，减少顶点
+    4. 过滤小碎片，只保留主要多边形
+    """
+    if geom.is_empty:
+        return geom
+    
+    # 1. 修复拓扑
+    if not geom.is_valid:
+        geom = geom.buffer(0)
+    
+    # 2. 多轮缓冲操作，更有效地移除内部条纹
+    # 第一轮：正向缓冲填充小缝隙
+    geom = geom.buffer(BUFFER_DISTANCE)
+    
+    if geom.is_empty:
+        return geom
+    
+    # 第二轮：负向缓冲（更大），移除细条和毛刺
+    geom = geom.buffer(NEGATIVE_BUFFER)
+    
+    if geom.is_empty:
+        return geom
+    
+    # 第三轮：正向缓冲恢复，使边界平滑
+    geom = geom.buffer(-NEGATIVE_BUFFER)
+    
+    if geom.is_empty:
+        return geom
+    
+    # 3. 简化轮廓
+    geom = geom.simplify(SIMPLIFY_TOLERANCE, preserve_topology=True)
+    
+    if geom.is_empty:
+        return geom
+    
+    # 4. 过滤碎片：保留主要多边形，移除面积过小的孤立碎片
+    if geom.geom_type == 'MultiPolygon':
+        # 找出最大多边形的面积
+        max_area = max(poly.area for poly in geom.geoms)
+        min_area = max_area * MIN_AREA_RATIO
+        
+        # 只保留面积足够大的多边形
+        kept_geoms = [poly for poly in geom.geoms if poly.area >= min_area]
+        
+        if not kept_geoms:
+            # 如果过滤后为空，至少保留最大的那个
+            kept_geoms = [max(geom.geoms, key=lambda p: p.area)]
+        
+        if len(kept_geoms) == 1:
+            geom = kept_geoms[0]
+        else:
+            geom = MultiPolygon(kept_geoms)
+    
+    return geom
 
 
 def count_points(coords) -> int:
@@ -111,7 +183,14 @@ def build_land_outline(tpu_path: Path):
     if skipped:
         print('  [WARN] 跳过 {} 个无效 TPU 几何'.format(skipped))
 
-    return unary_union(geoms), len(geoms)
+    # 合并所有 TPU 形成陆地轮廓
+    land = unary_union(geoms)
+    
+    # 清理合并后的陆地轮廓，移除内部杂质
+    print('  [INFO] 清理陆地轮廓...')
+    land = clean_geometry(land)
+
+    return land, len(geoms)
 
 
 def clip_districts(district_path: Path, land) -> dict:
@@ -146,12 +225,22 @@ def clip_districts(district_path: Path, land) -> dict:
             geom = geom.buffer(0)
 
         points_before = count_points(feature['geometry']['coordinates'])
+        
+        # 裁剪
         clipped = geom.intersection(land)
 
         if clipped.is_empty:
             # 裁剪后为空说明该区与陆地轮廓无交集，保留原几何而不是丢弃该区，
             # 否则地图上会整块缺失，比边界粗糙的后果严重得多。
             warnings.append('{}: 裁剪后为空，保留原始几何'.format(name))
+            features.append(feature)
+            continue
+        
+        # 清理几何：移除内部条纹、杂质和碎片
+        clipped = clean_geometry(clipped)
+        
+        if clipped.is_empty:
+            warnings.append('{}: 清理后为空，保留原始几何'.format(name))
             features.append(feature)
             continue
 
@@ -216,7 +305,7 @@ def main() -> int:
     print('[LAND ] 合并 {} 个 TPU -> {}，面积 {:.6f} 平方度'.format(
         used, land.geom_type, land.area))
 
-    print('[CLIP ] 裁剪各行政区...')
+    print('[CLIP ] 裁剪各行政区（含几何清理：简化、去碎片、闭合缝隙）...')
     result = clip_districts(district_path, land)
 
     output_path = Path(args.output) if args.output else district_path
