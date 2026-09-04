@@ -22,13 +22,15 @@ def main() -> None:
     parser.add_argument('--days', type=int, default=30,
                         help='Number of days to look back (default: 30)')
     parser.add_argument('--range-days', type=int, default=7,
-                        help='Number of days per range (default: 7)')
+                        help='Number of days per range (default: 7, ignored if --weekly)')
     parser.add_argument('--from', dest='from_date',
                         help='Start date (YYYY-MM-DD)')
     parser.add_argument('--to', dest='to_date',
                         help='End date (YYYY-MM-DD)')
     parser.add_argument('--single-day', action='store_true',
                         help='Process each day individually')
+    parser.add_argument('--weekly', action='store_true',
+                        help='Group by natural weeks (Monday to Sunday), reduces queries to ~4 per month')
     # 保留旧参数兼容性；共享抽取服务固定读取 sqltemplate 下三套模板。
     parser.add_argument('--use-setting-ini', action='store_true',
                         help=argparse.SUPPRESS)
@@ -53,10 +55,11 @@ def main() -> None:
             range_days=args.range_days,
             end_date=args.to_date,
             single_day=args.single_day,
+            weekly=args.weekly,
             logger=logger,
         )
-        logger.info('Extraction completed: release=%s queries=%s',
-                    result['taskId'], result['queryCount'])
+        logger.info('Extraction completed: release=%s queries=%s ranges=%s',
+                    result['taskId'], result['queryCount'], result.get('rangeCount', 'N/A'))
     except Exception:
         logger.exception('CSV extraction failed')
         raise SystemExit(1)
