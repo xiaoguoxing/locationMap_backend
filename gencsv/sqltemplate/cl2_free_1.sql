@@ -9,8 +9,7 @@ select TOP 1000
 	sa.current_state,	
 	sa.coldate,	
 	sa.owner,	
-	-- 优先使用 bic_bl_aec_district（标准 18 区名），不存在时退回 district（邻里名）
-	coalesce(nullif(trim(suf.bic_bl_aec_district), ''), lower(suf.district)) as district,	
+	lower(suf.district) as district,	
 	suf.loc_gps_latitude,	
 	suf.loc_gps_longitude,	
 	re.result,	

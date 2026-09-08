@@ -178,11 +178,29 @@ class CsvMeasurementRepository(MeasurementRepository):
         out['locationDesc'] = df.get('locdescr')
         out['collectedAt'] = df.get('coldate')
         out['owner'] = df.get('owner')
-        # district 在 CSV 里是邻里名（如 the peak），统一小写便于后续映射
-        out['district'] = (
-            df['district'].astype(str).str.lower().str.strip()
-            if 'district' in df.columns else None
-        )
+        # 需求：生成地图显示 18 区时，优先依赖 CSV 中的 big_district 列
+        # 若存在 big_district 且非空则优先使用；否则回退使用 district 列（邻里名）
+        big_dist_col = None
+        for col in ('big_district', 'big district', 'bigdistrict'):
+            if col in df.columns:
+                big_dist_col = col
+                break
+
+        if big_dist_col:
+            s_big = df[big_dist_col].astype(str).str.strip()
+            s_big = s_big.mask(s_big.str.lower().isin(['nan', 'none', '']))
+            if 'district' in df.columns:
+                s_dist = df['district'].astype(str).str.strip()
+                s_dist = s_dist.mask(s_dist.str.lower().isin(['nan', 'none', '']))
+                out['district'] = s_big.fillna(s_dist).str.lower()
+            else:
+                out['district'] = s_big.str.lower()
+        elif 'district' in df.columns:
+            out['district'] = (
+                df['district'].astype(str).str.lower().str.strip()
+            )
+        else:
+            out['district'] = None
         out['latitude'] = pd.to_numeric(df[lat_col], errors='coerce') if lat_col else None
         out['longitude'] = pd.to_numeric(df[lon_col], errors='coerce') if lon_col else None
         out['value'] = pd.to_numeric(df.get('result'), errors='coerce')
