@@ -8,6 +8,7 @@ port = 1433
 database = <db-name>
 username = <db-user>
 password = <db-password>
+tds_version = 7.2
 
 ; prod 环境示例（按需切换）
 ;host = <prod-db-host>
@@ -15,6 +16,7 @@ password = <db-password>
 ;database = <prod-db-name>
 ;username = <prod-db-user>
 ;password = <prod-db-password>
+;tds_version = 7.2
 
 [PATHS]
 ; 相对于脚本所在目录

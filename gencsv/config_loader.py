@@ -10,7 +10,7 @@ def get_config():
     if not os.path.exists(ini_path):
         raise FileNotFoundError(f"Configuration file not found: {ini_path}")
         
-    config.read(ini_path)
+    config.read(ini_path, encoding='utf-8')
     
     return {
         'db_info': { # Renamed from 'db' to match main.py
@@ -19,6 +19,7 @@ def get_config():
             'database': config.get('DATABASE', 'database'),
             'username': config.get('DATABASE', 'username'),
             'password': config.get('DATABASE', 'password'),
+            'tds_version': config.get('DATABASE', 'tds_version', fallback='7.2'),
         },
         'paths': {
             'script_dir': script_dir,

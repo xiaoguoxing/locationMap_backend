@@ -12,6 +12,7 @@ def get_connection_string(db_config):
         'user': db_config.get('username', db_config.get('user')),
         'password': db_config.get('password'),
         'charset': 'utf8',
+        'tds_version': db_config.get('tds_version', '7.2'),
     }
 
 def execute_query_to_csv(sql_query, output_file_path, db_config, logger):
@@ -27,6 +28,7 @@ def execute_query_to_csv(sql_query, output_file_path, db_config, logger):
             user=db_config.get('username', db_config.get('user')),
             password=db_config.get('password'),
             charset='utf8',
+            tds_version=db_config.get('tds_version', '7.2'),
         )
         cursor = conn.cursor()
         cursor.execute(sql_query)
