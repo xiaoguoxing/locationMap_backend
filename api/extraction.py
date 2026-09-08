@@ -12,6 +12,8 @@ from typing import Optional
 
 from gencsv.extraction_service import (
     ExtractionAlreadyRunningError,
+    generate_date_ranges,
+    generate_weekly_ranges,
     run_extraction,
 )
 
@@ -25,8 +27,8 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 
-def start_refresh() -> dict:
-    """创建最近 30 天、7 天滚动窗口的后台同步任务。"""
+def start_refresh(weekly: bool = True) -> dict:
+    """创建最近 30 天后台同步任务（默认使用按自然周 --weekly 模式）。"""
     global _active_task_id
     with _lock:
         if _active_task_id:
@@ -36,13 +38,21 @@ def start_refresh() -> dict:
                 result['reused'] = True
                 return result
 
+        try:
+            if weekly:
+                expected_queries = len(generate_weekly_ranges(days_back=30)) * 3
+            else:
+                expected_queries = len(generate_date_ranges(days_back=30, range_days=7)) * 3
+        except Exception:
+            expected_queries = 15 if weekly else 93
+
         task_id = str(uuid.uuid4())
         task = {
             'taskId': task_id,
             'status': 'queued',
             'stage': 'queued',
             'completedQueries': 0,
-            'totalQueries': 93,
+            'totalQueries': expected_queries,
             'startedAt': None,
             'finishedAt': None,
             'releaseId': None,
@@ -52,12 +62,12 @@ def start_refresh() -> dict:
         _tasks[task_id] = task
         _active_task_id = task_id
 
-    thread = threading.Thread(target=_run_task, args=(task_id,), daemon=True)
+    thread = threading.Thread(target=_run_task, args=(task_id, weekly), daemon=True)
     thread.start()
     return deepcopy(task)
 
 
-def _run_task(task_id: str) -> None:
+def _run_task(task_id: str, weekly: bool = True) -> None:
     global _active_task_id
 
     def update_progress(stage: str, completed: int, total: int) -> None:
@@ -74,8 +84,12 @@ def _run_task(task_id: str) -> None:
         _tasks[task_id]['startedAt'] = _now_ms()
 
     try:
-        result = run_extraction(days_back=30, range_days=7,
-                                progress=update_progress, logger=logger)
+        if weekly:
+            result = run_extraction(days_back=30, weekly=True,
+                                    progress=update_progress, logger=logger)
+        else:
+            result = run_extraction(days_back=30, range_days=7,
+                                    progress=update_progress, logger=logger)
         with _lock:
             task = _tasks[task_id]
             task['status'] = 'succeeded'

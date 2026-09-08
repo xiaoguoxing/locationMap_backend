@@ -1,28 +1,33 @@
 import csv
 from pathlib import Path
 
-import pyodbc
+import pymssql
 
 def get_connection_string(db_config):
-    # Driver might vary depending on server installation (ODBC Driver 17/18 for SQL Server)
-    # Using a generic approach, you may need to adjust the Driver name
-    conn_str = (
-        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
-        f"SERVER={db_config['host']},{db_config['port']};"
-        f"DATABASE={db_config['database']};"
-        f"UID={db_config['username']};"
-        f"PWD={db_config['password']};"
-        f"TrustServerCertificate=yes;"
-    )
-    return conn_str
+    # pymssql 使用连接参数字典，保留原函数名与入参以保持兼容
+    return {
+        'server': db_config.get('host', db_config.get('server')),
+        'port': str(db_config.get('port', 1433)),
+        'database': db_config.get('database'),
+        'user': db_config.get('username', db_config.get('user')),
+        'password': db_config.get('password'),
+        'charset': 'utf8',
+    }
 
 def execute_query_to_csv(sql_query, output_file_path, db_config, logger):
     """执行固定模板生成的 SQL，并将结果写入指定暂存文件。"""
     conn = None
     output_path = Path(output_file_path)
     try:
-        conn_str = get_connection_string(db_config)
-        conn = pyodbc.connect(conn_str)
+        conn_params = get_connection_string(db_config)
+        conn = pymssql.connect(**conn_params) if isinstance(conn_params, dict) else pymssql.connect(
+            server=db_config.get('host', db_config.get('server')),
+            port=str(db_config.get('port', 1433)),
+            database=db_config.get('database'),
+            user=db_config.get('username', db_config.get('user')),
+            password=db_config.get('password'),
+            charset='utf8',
+        )
         cursor = conn.cursor()
         cursor.execute(sql_query)
         columns = [column[0] for column in cursor.description]

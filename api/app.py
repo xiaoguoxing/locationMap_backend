@@ -151,10 +151,12 @@ def _register_routes(app: Flask) -> None:
 
     @app.route('/api/water-quality/extraction/refresh', methods=['POST', 'OPTIONS'])
     def extraction_refresh():
-        """触发后台 CSV 同步；不接受前端传入 SQL、日期或文件路径。"""
+        """触发后台 CSV 同步；默认执行 --weekly 模式，不接受前端传入 SQL、日期或文件路径。"""
         if request.method == 'OPTIONS':
             return '', 204
-        return success(extraction.start_refresh())
+        payload = request.get_json(silent=True) or {}
+        weekly = bool(payload.get('weekly', True))
+        return success(extraction.start_refresh(weekly=weekly))
 
     @app.route('/api/water-quality/extraction/status', methods=['GET'])
     def extraction_status():

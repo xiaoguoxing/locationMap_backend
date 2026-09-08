@@ -11,8 +11,8 @@ if not exist "%PYTHON%" (
 )
 
 if "%~1"=="" (
-    echo Extracting the latest 30 days with 7-day rolling windows...
-    "%PYTHON%" "%~dp0gencsv\date_range_runner.py" --days 30 --range-days 7
+    echo Extracting the latest 30 days with weekly windows (--weekly)...
+    "%PYTHON%" "%~dp0gencsv\date_range_runner.py" --days 30 --weekly
 ) else (
     echo Extracting CSV data with arguments: %*
     "%PYTHON%" "%~dp0gencsv\date_range_runner.py" %*

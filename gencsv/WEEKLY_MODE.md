@@ -96,19 +96,18 @@ print(f"生成 {result['rangeCount']} 个周区间，共 {result['queryCount']} 
 - **前端隐藏按钮**：生产环境可修改为按周模式
 - **未来直连数据库**：按周模式更适合实时查询
 
-## 前端 API 集成（可选）
-
-如需前端隐藏同步按钮也使用按周模式，修改 `api/extraction.py`：
-
+## 前端 API 集成
+ 
+前端隐藏同步按钮已在 `api/extraction.py` 和 `api/app.py` 中默认启用按周模式（`--weekly`）：
+ 
 ```python
-# 修改前
-result = run_extraction(days_back=30, range_days=7)
-
-# 修改后
-result = run_extraction(days_back=30, weekly=True)
+# api/extraction.py
+def start_refresh(weekly: bool = True) -> dict:
+    ...
+    result = run_extraction(days_back=30, weekly=True, ...)
 ```
-
-重启 API 服务后，前端按钮触发的同步任务将自动按周查询。
+ 
+前端按钮触发的同步任务将自动按周查询，查询次数由 93 次降至约 15~18 次。
 
 ## 测试验证
 
