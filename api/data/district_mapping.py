@@ -31,6 +31,7 @@ NEIGHBORHOOD_TO_DISTRICT = {
     "taikoo shing": "Eastern",
     "sai wan ho": "Eastern",
     "heng fa chuen": "Eastern",
+    "shek o": "Eastern",
     
     # Southern
     "aberdeen": "Southern",
@@ -71,6 +72,8 @@ NEIGHBORHOOD_TO_DISTRICT = {
     "choi hung": "Wong Tai Sin",
     "diamond hill": "Wong Tai Sin",
     "fung tak": "Wong Tai Sin",
+    "wang tau hom": "Wong Tai Sin",
+    "tsz wan shan": "Wong Tai Sin",
     
     # Kwun Tong
     "kwun tong": "Kwun Tong",
@@ -80,7 +83,6 @@ NEIGHBORHOOD_TO_DISTRICT = {
     "yau tong": "Kwun Tong",
     "kowloon bay": "Kwun Tong",
     "jordan valley": "Kwun Tong",
-    "tsz wan shan": "Kwun Tong",
     
     # Tsuen Wan
     "tsuen wan east": "Tsuen Wan",
@@ -125,6 +127,9 @@ NEIGHBORHOOD_TO_DISTRICT = {
     "ma on shan": "Sha Tin",
     "tai wai": "Sha Tin",
     "fo tan": "Sha Tin",
+    "siu lek yuen": "Sha Tin",
+    "tsu leck yuen": "Sha Tin",
+    "tsui lek yuen": "Sha Tin",
     
     # Kwai Tsing
     "kwai chung": "Kwai Tsing",
@@ -144,3 +149,67 @@ NEIGHBORHOOD_TO_DISTRICT = {
     "cheung chau": "Islands",
     "tai o": "Islands",
 }
+
+# 香港 18 官方行政区名列表
+OFFICIAL_DISTRICTS = [
+    "Central & Western",
+    "Wan Chai",
+    "Eastern",
+    "Southern",
+    "Yau Tsim Mong",
+    "Sham Shui Po",
+    "Kowloon City",
+    "Wong Tai Sin",
+    "Kwun Tong",
+    "Tsuen Wan",
+    "Tuen Mun",
+    "Yuen Long",
+    "North",
+    "Tai Po",
+    "Sai Kung",
+    "Sha Tin",
+    "Kwai Tsing",
+    "Islands",
+]
+
+_LOOKUP = {}
+for _k, _v in NEIGHBORHOOD_TO_DISTRICT.items():
+    _key = _k.lower().strip()
+    _LOOKUP[_key] = _v
+    _LOOKUP[_key.replace(" ", "")] = _v
+
+for _d in OFFICIAL_DISTRICTS:
+    _low = _d.lower()
+    _LOOKUP[_low] = _d
+    _LOOKUP[_low.replace(" ", "")] = _d
+    _LOOKUP[_low.replace("&", "and")] = _d
+    _LOOKUP[_low.replace("&", "and").replace(" ", "")] = _d
+
+
+def get_big_district(raw) -> str:
+    """
+    根据原始地点/区名查找对应的香港 18 官方行政大区名称 (big_district)。
+    若未识别或为空则返回空字符串。
+    """
+    if raw is None:
+        return ""
+    name = str(raw).strip().lower()
+    if not name or name in ("nan", "none", "null"):
+        return ""
+
+    if name in _LOOKUP:
+        return _LOOKUP[name]
+
+    no_space = name.replace(" ", "")
+    if no_space in _LOOKUP:
+        return _LOOKUP[no_space]
+
+    for token in ("&", "and", "-"):
+        variant = name.replace(token, " ")
+        if variant in _LOOKUP:
+            return _LOOKUP[variant]
+        if variant.replace(" ", "") in _LOOKUP:
+            return _LOOKUP[variant.replace(" ", "")]
+
+    return ""
+

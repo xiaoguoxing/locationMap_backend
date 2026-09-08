@@ -3,6 +3,19 @@ from pathlib import Path
 
 import pymssql
 
+try:
+    from api.data.district_mapping import get_big_district
+except ImportError:
+    import sys
+    _parent = Path(__file__).resolve().parent.parent
+    if str(_parent) not in sys.path:
+        sys.path.insert(0, str(_parent))
+    try:
+        from api.data.district_mapping import get_big_district
+    except ImportError:
+        def get_big_district(raw):
+            return ''
+
 def get_connection_string(db_config):
     # pymssql 使用连接参数字典，保留原函数名与入参以保持兼容
     return {
@@ -34,14 +47,30 @@ def execute_query_to_csv(sql_query, output_file_path, db_config, logger):
         cursor.execute(sql_query)
         columns = [column[0] for column in cursor.description]
 
+        col_lower = [str(col).lower().strip() for col in columns]
+        district_idx = col_lower.index('district') if 'district' in col_lower else -1
+        add_big_district = (district_idx != -1) and ('big_district' not in col_lower)
+
+        out_columns = list(columns)
+        if add_big_district:
+            out_columns.append('big_district')
+
         with output_path.open('w', newline='', encoding='utf-8') as handle:
             writer = csv.writer(handle)
-            writer.writerow(columns)
+            writer.writerow(out_columns)
             while True:
                 rows = cursor.fetchmany(1000)
                 if not rows:
                     break
-                writer.writerows(rows)
+                if add_big_district:
+                    enriched_rows = []
+                    for row in rows:
+                        raw_dist = row[district_idx]
+                        big_dist = get_big_district(raw_dist)
+                        enriched_rows.append(list(row) + [big_dist])
+                    writer.writerows(enriched_rows)
+                else:
+                    writer.writerows(rows)
 
         logger.info('Success: %s', output_path.name)
     except Exception:
