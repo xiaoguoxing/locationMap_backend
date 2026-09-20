@@ -77,6 +77,12 @@ class CsvMeasurementRepository(MeasurementRepository):
             match = _FILENAME_PATTERN.match(path.name)
             if not match:
                 continue
+            # 跳过无数据记录的空文件（仅有表头通常 <= 180 字节）
+            try:
+                if path.stat().st_size <= 180:
+                    continue
+            except OSError:
+                continue
             found.append({
                 'parameter': match.group('param'),
                 'dateFrom': match.group('from'),
